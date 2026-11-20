@@ -1,12 +1,13 @@
+import {current,resource} from './session.js';
 const $=id=>document.getElementById(id)
 const fields={topic:"Área",mode:"Modalidad",country:"País o alcance",fee:"Costo",status:"Disponibilidad"}
 const norm=value=>String(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 const state=new URLSearchParams(location.search)
 const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"America/Lima"}).format(new Date())
-async function init(){
- const response=await fetch("cursos.json")
+async function init(user){
+ const response=await resource("cursos")
  if(!response.ok)throw Error()
- const courses=await response.json()
+ const courses=await response.json();if(user!==current())return;
  for(const c of courses)if(c.start&&c.start<=today&&c.status==="Programado")c.status="Fecha iniciada"
  for(const [key,title] of Object.entries(fields)){
   const label=document.createElement("label"),select=document.createElement("select");label.textContent=title;select.id=key
@@ -15,12 +16,12 @@ async function init(){
   select.value=state.get(key)||"";label.append(select);$("filters").append(label);select.onchange=draw
  }
  $("q").value=state.get("q")||"";$("q").oninput=draw
- let owner=window.aulaUser||'visitante', onlySaved=false, saved=new Set();
+ let owner=user.id, onlySaved=false, saved=new Set();
  function readSaved(){
   try{saved=new Set(JSON.parse(localStorage.getItem('aula-base25:'+owner)||'[]'))}catch{saved=new Set()}
  }
  readSaved();
- window.addEventListener('aula-account',event=>{owner=event.detail;readSaved();draw()});
+
  $('saved-only').onclick=()=>{onlySaved=!onlySaved;draw()};
  for(const button of document.querySelectorAll('[data-preset]')){
   button.onclick=()=>{
@@ -63,7 +64,17 @@ async function init(){
  }
  $("clear").onclick=()=>{onlySaved=false;$("q").value="";for(const k in fields)$(k).value="";draw()}
  $("share").onclick=async e=>{e.preventDefault();const url=new URL(location.href);url.hash="catalogo";try{await navigator.clipboard.writeText(url.href);$("share").textContent="Enlace copiado";setTimeout(()=>$("share").textContent="Copiar búsqueda",2200)}catch{$("feedback").textContent="Copia este enlace: "+url.href}}
+ $('catalogo').hidden=false;$('gate').hidden=true;
+ for(const entry of document.querySelectorAll('[data-member]'))entry.hidden=false;
+ $('explore').href='#catalogo';$('explore').textContent='Explorar cursos ↓';
  draw()
 }
-init().catch(()=>$("count").textContent="No se pudo cargar el catálogo. Vuelve a cargar la página.")
-
+function lock(){
+ $('cards').replaceChildren();$('filters').replaceChildren();$('catalogo').hidden=true;$('gate').hidden=false;
+ for(const entry of document.querySelectorAll('[data-member]'))entry.hidden=true;
+ $('explore').href='#cuenta';$('explore').textContent='Ingresar al catálogo';
+}
+async function refresh(){lock();const user=current();if(!user)return;try{await init(user)}catch(err){$('gate-message').textContent=err.message;$('register-now').textContent='Abrir mi cuenta'}}
+window.addEventListener('aula-session',refresh);
+$('download').onclick=async()=>{try{const blob=await (await resource('pdf')).blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='Aula-Nuclear-Base25.pdf';link.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch(err){$('feedback').textContent=err.message}};
+refresh();
