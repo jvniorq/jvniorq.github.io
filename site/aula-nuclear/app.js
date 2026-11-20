@@ -15,7 +15,7 @@ async function init(){
   select.value=state.get(key)||"";label.append(select);$("filters").append(label);select.onchange=draw
  }
  $("q").value=state.get("q")||"";$("q").oninput=draw
- let owner='visitante', onlySaved=false, saved=new Set();
+ let owner=window.aulaUser||'visitante', onlySaved=false, saved=new Set();
  function readSaved(){
   try{saved=new Set(JSON.parse(localStorage.getItem('aula-base25:'+owner)||'[]'))}catch{saved=new Set()}
  }
