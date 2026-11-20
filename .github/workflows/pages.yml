@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
   pages: write
   id-token: write
 concurrency:
@@ -20,18 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5.0.0
         with:
           path: site
-      - name: Esperar a que el paquete esté disponible para Pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for attempt in {1..18}; do
-            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=github-pages" --jq '.total_count')
-            if [[ "$count" -gt 0 ]]; then exit 0; fi
-            sleep 5
-          done
-          exit 1
-      - uses: actions/deploy-pages@v4
+          include-hidden-files: true
+      - uses: actions/deploy-pages@v5.0.1
         id: deployment
